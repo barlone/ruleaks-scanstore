@@ -12,5 +12,5 @@ set -o allexport
 source ./gittoken
 set +o allexport
 
-git pull  https://barlone:${GITTOKEN}@github.com/barlone/dsstalker-api-gate.git
+git pull  https://barlone:${GITTOKEN}@github.com/barlone/ruleaks-scanstore.git
        

@@ -12,4 +12,4 @@ set -o allexport
 source ./gittoken
 set +o allexport
 
-git push https://barlone:${GITTOKEN}@github.com/barlone/dsstalker-api-gate.git
+git push https://barlone:${GITTOKEN}@github.com/barlone/ruleaks-scanstore.git
