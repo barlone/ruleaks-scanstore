@@ -1,4 +1,7 @@
 config.ini
-filestore/
+# Папки с данными только в корне проекта. Без "/" правило "filestore/" совпадало и с исходниками
+# пакета internal/filestore/, и они не попадали в репозиторий (на сервере: "package ... is not in std").
+/filestore/
+/store/
 *.exe
 gittoken

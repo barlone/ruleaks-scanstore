@@ -18,7 +18,7 @@ StartLimitIntervalSec=0
 Type=simple
 User=scanstore
 Group=scanstore
-ExecStart=/opt/scanstore/scanstore -config /etc/scanstore/config.ini
+ExecStart=/opt/scanstore/api-server -config /etc/scanstore/config.ini
 Restart=on-failure
 RestartSec=5
 
