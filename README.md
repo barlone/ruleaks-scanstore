@@ -71,6 +71,48 @@ curl -H "Authorization: Bearer $TOKEN" -o scan.jpg http://127.0.0.1:8000/scans/<
 - `/health` проверяет доступность БД.
 - Для `GET /scans/{id}` добавлены ETag, Range и обработка условных запросов.
 
+## Развёртывание на Linux (systemd)
+
+В папке `deploy/`: `scanstore.service` (unit-файл) и скрипты `start.sh`, `stop.sh`, `status.sh` (общие функции — в `common.sh`). Раскладка на сервере:
+
+| Что | Где |
+|---|---|
+| бинарник | `/opt/scanstore/scanstore` |
+| конфиг (токен и пароль БД) | `/etc/scanstore/config.ini`, владелец `root:scanstore`, права `0640` |
+| картинки | `/var/lib/scanstore/store` (папку создаёт systemd) |
+| пользователь | `scanstore` (системный, без входа) |
+
+В `config.ini` на сервере нужно указать `[store] dir = /var/lib/scanstore/store` (относительный путь считался бы от `/etc/scanstore`) и `[server] host`: `127.0.0.1`, если API стоит за nginx на том же сервере, или адрес внутреннего интерфейса.
+
+Сборка под Linux (на машине разработки, PowerShell) и установка (на сервере, под root):
+
+```
+$env:GOOS = "linux"; $env:GOARCH = "amd64"; go build -trimpath -ldflags "-s -w" -o scanstore . ; Remove-Item Env:GOOS, Env:GOARCH
+```
+
+```
+useradd --system --no-create-home --shell /usr/sbin/nologin scanstore
+install -d -m 0755 /opt/scanstore
+install -m 0755 scanstore /opt/scanstore/scanstore
+install -m 0755 deploy/start.sh deploy/stop.sh deploy/status.sh deploy/common.sh /opt/scanstore/
+install -d -o root -g scanstore -m 0750 /etc/scanstore
+install -o root -g scanstore -m 0640 config.ini /etc/scanstore/config.ini
+install -m 0644 deploy/scanstore.service /etc/systemd/system/scanstore.service
+systemctl daemon-reload
+systemctl enable scanstore          # автозапуск при загрузке
+/opt/scanstore/start.sh
+```
+
+Скрипты (под обычным пользователем `start.sh` и `stop.sh` вызывают `sudo systemctl`):
+
+| Скрипт | Что делает | Код возврата |
+|---|---|---|
+| `start.sh` | запускает службу и ждёт ответа `/health` (по умолчанию 30 с, `WAIT=60 ./start.sh` — дольше); при неудаче печатает журнал | `0` — работает, `1` — не запустилась |
+| `stop.sh` | останавливает службу; сервер дожидается текущих запросов (до 30 с), systemd ждёт до 40 с | `0` — остановлена, `1` — не остановилась |
+| `status.sh` | состояние systemd, автозапуск, PID, память, число перезапусков, ответ `/health`, последние строки журнала (`LOG_LINES=50`) | `0` — работает, `1` — активна, но API не отвечает, `3` — не запущена, `4` — не установлена |
+
+Адрес для проверки `/health` берётся из `[server] host` и `port` в `/etc/scanstore/config.ini` (если файл не читается, то `127.0.0.1:8000`); переопределить можно переменными `SCANSTORE_URL`, `SCANSTORE_CONFIG` и `SCANSTORE_SERVICE`. Журнал: `journalctl -u scanstore -f`. Если БД при старте недоступна, сервер завершается с ошибкой, а systemd пробует запустить его снова каждые 5 секунд без ограничения числа попыток.
+
 ## Массовая загрузка
 
 `cmd/bulkload` обходит папку рекурсивно и отправляет каждую пару `<имя>.jpg` + `<имя>.json` через `POST /scans` (JSON уходит в поле `meta`). Картинки сохраняются в файловом хранилище сервера, строки — в БД.

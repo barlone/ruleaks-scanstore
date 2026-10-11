@@ -1,0 +1,59 @@
+# Служба systemd для scanstore (REST API хранилища сканов).
+#
+# Раскладка на сервере:
+#   /opt/scanstore/scanstore        бинарник (GOOS=linux GOARCH=amd64 go build -o scanstore .)
+#   /etc/scanstore/config.ini       конфиг (api_token и пароль БД: владелец root:scanstore, права 0640)
+#   /var/lib/scanstore/store        картинки; в config.ini: [store] dir = /var/lib/scanstore/store
+#
+# Установка и управление - в README.md (раздел "Развёртывание") и скриптах start.sh, stop.sh, status.sh.
+
+[Unit]
+Description=scanstore - REST API хранилища сканов документов
+After=network-online.target
+Wants=network-online.target
+# Без БД сервер при старте завершается с ошибкой; пробуем снова без ограничения числа попыток
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=scanstore
+Group=scanstore
+ExecStart=/opt/scanstore/scanstore -config /etc/scanstore/config.ini
+Restart=on-failure
+RestartSec=5
+
+# SIGTERM сервер обрабатывает сам: дожидается текущих запросов (до 30 с) и выходит с кодом 0
+KillSignal=SIGTERM
+TimeoutStopSec=40
+
+# /var/lib/scanstore создаёт и отдаёт пользователю службы сам systemd, он же остаётся
+# единственным местом, куда службе разрешена запись
+StateDirectory=scanstore
+StateDirectoryMode=0750
+UMask=0027
+LimitNOFILE=65536
+
+# Ограничения: сервису нужны только сеть и своя папка с данными
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target

@@ -17,6 +17,8 @@ go build -o scanstore.exe . ; .\scanstore.exe -config config.ini
 go run ./cmd/bulkload -dry-run                    # массовая загрузка сканов через API (см. README); журнал bulkload.jsonl
 ```
 
+Развёртывание на Linux — `deploy/` (unit-файл systemd и скрипты `start.sh`, `stop.sh`, `status.sh`, см. README). systemd на этой машине нет: скрипты проверялись только на заглушках `systemctl`, unit-файл против живого systemd не запускался.
+
 PostgreSQL на этой машине нет (ни в Windows, ни в WSL), поэтому `internal/metastore/postgres.go` против живой базы не проверялся. Для ручной проверки сервера используйте отдельный ini-файл с другими `port` и `[store] dir`.
 
 ## Устройство
