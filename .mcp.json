@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "scanstore-devel": {
+      "command": "C:\\Users\\Dima\\.local\\bin\\postgres-mcp.exe",
+      "args": [
+        "--access-mode=restricted"
+      ],
+      "env": {
+        "DATABASE_URI": "${SCANSTORE_DB_URI}"
+      }
+    }
+  }
+}
